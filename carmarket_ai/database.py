@@ -1,19 +1,22 @@
 import duckdb
 
+# 🔹 Conexión a la base de datos
 conn = duckdb.connect("market.db")
 
+# 🔹 Crear tabla si no existe
 conn.execute("""
 CREATE TABLE IF NOT EXISTS cars (
-    vehicle_id VARCHAR,
+    url VARCHAR PRIMARY KEY,
+    creationDate VARCHAR,
+    fuelType VARCHAR,
+    mainProvince VARCHAR,
     make VARCHAR,
     model VARCHAR,
-    engine VARCHAR,
-    year INTEGER,
-    km INTEGER,
     price INTEGER,
-    province VARCHAR,
-    seller_type VARCHAR,
-    link VARCHAR,
+    km INTEGER,
+    title VARCHAR,
+    seller_name VARCHAR,
+    seller_isProfessional BOOLEAN,
     first_seen DATE,
     last_seen DATE
 )
