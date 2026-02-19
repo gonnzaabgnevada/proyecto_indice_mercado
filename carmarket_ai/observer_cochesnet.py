@@ -1,13 +1,22 @@
 from playwright.sync_api import sync_playwright
 import duckdb
 import datetime
+import random
 import time
 
-# --------------------------
-# DB
-# --------------------------
+# -------------------------
+# CONFIGURACIÓN DE PÁGINAS
+# -------------------------
+PAGE_BLOCK = 1   # 👈 CAMBIA SOLO ESTO
+
+PAGES_PER_BLOCK = 10
+start_page = (PAGE_BLOCK - 1) * PAGES_PER_BLOCK + 1
+end_page = PAGE_BLOCK * PAGES_PER_BLOCK
+
+# Conectar/crear base de datos
 conn = duckdb.connect("market.db")
 
+# Crear tabla si no existe
 conn.execute("""
 CREATE TABLE IF NOT EXISTS cars (
     url VARCHAR PRIMARY KEY,
@@ -26,51 +35,37 @@ CREATE TABLE IF NOT EXISTS cars (
 )
 """)
 
-BATCH_SIZE = 100
-batch = []
-
-def flush_batch():
-    global batch
-    if not batch:
-        return
-
-    conn.executemany("""
-        INSERT INTO cars VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(url) DO UPDATE SET
-            last_seen = excluded.last_seen,
-            price = excluded.price
-    """, batch)
-
-    batch = []
-
-def add_to_batch(v):
-    global batch
+def save_car(
+    url, creationDate, fuelType, mainProvince, make, model, price, km,
+    title, seller_name, seller_isProfessional
+):
     today = datetime.date.today()
 
-    batch.append((
-        "https://www.coches.net" + v.get("link", ""),
-        v.get("creationDate", ""),
-        v.get("fuelType", ""),
-        v.get("mainProvince", ""),
-        v.get("make", ""),
-        v.get("model", ""),
-        v.get("price", 0),
-        v.get("km", 0),
-        v.get("title", ""),
-        v.get("seller", {}).get("name", ""),
-        v.get("seller", {}).get("isProfessional", False),
-        today,
-        today
-    ))
+    existing = conn.execute(
+        "SELECT url FROM cars WHERE url = ?",
+        (url,)
+    ).fetchone()
 
-    if len(batch) >= BATCH_SIZE:
-        flush_batch()
+    if existing:
+        conn.execute("""
+            UPDATE cars
+            SET last_seen = ?, price = ?
+            WHERE url = ?
+        """, (today, price, url))
+    else:
+        conn.execute("""
+            INSERT INTO cars VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            url, creationDate, fuelType, mainProvince, make, model,
+            price, km, title, seller_name, seller_isProfessional, today, today
+        ))
 
-# --------------------------
-# SCRAPER
-# --------------------------
 with sync_playwright() as p:
-    browser = p.chromium.launch(headless=False)
+    browser = p.chromium.launch(
+        headless=False,
+        args=["--disable-blink-features=AutomationControlled"]
+    )
+
     context = browser.new_context(
         user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         locale="es-ES",
@@ -79,49 +74,81 @@ with sync_playwright() as p:
 
     page = context.new_page()
 
-    # stealth básico
     page.add_init_script("""
-        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        Object.defineProperty(navigator, 'webdriver', {
+            get: () => undefined
+        })
     """)
 
-    page_number = 1
+    try:
+        for page_number in range(start_page, end_page + 1):
 
-    while True:
-        url = f"https://www.coches.net/segunda-mano/?pg={page_number}"
-        print(f"\n➡ Página {page_number}")
+            print(f"\n➡ Scrapeando página {page_number}")
 
-        page.goto(url, wait_until="domcontentloaded")
+            url_page = f"https://www.coches.net/segunda-mano/?pg={page_number}"
+            page.goto(url_page, wait_until="domcontentloaded")
 
-        # Esperar a que exista la variable JS real
-        try:
-            page.wait_for_function("() => window.__INITIAL_PROPS__ !== undefined", timeout=15000)
-        except:
-            print("❌ No se encontró __INITIAL_PROPS__ (posible bloqueo)")
-            break
+            # Esperar a que React cargue los datos
+            try:
+                page.wait_for_function(
+                    "() => window.__INITIAL_PROPS__ !== undefined",
+                    timeout=15000
+                )
+            except:
+                print("No se pudo cargar __INITIAL_PROPS__")
+                continue
 
-        data = page.evaluate("() => window.__INITIAL_PROPS__")
+            data = page.evaluate("() => window.__INITIAL_PROPS__")
 
-        if not data:
-            print("❌ Data es None")
-            break
+            if not data:
+                print("Data vacía")
+                continue
 
-        # NUEVA estructura
-        search = data.get("searchResults") or data.get("initialResults") or {}
-        vehicles = search.get("items", [])
+            vehicles = data.get("initialResults", {}).get("items", [])
 
-        if not vehicles:
-            print("No quedan más vehículos.")
-            break
+            if not vehicles:
+                print("No se encontraron vehículos")
+                continue
 
-        print(f"Vehículos encontrados: {len(vehicles)}")
+            print("Vehículos encontrados:", len(vehicles))
 
-        for v in vehicles:
-            add_to_batch(v)
+            for v in vehicles:
+                try:
+                    link = v.get("url", "")
+                    if not link:
+                        continue
 
-        page_number += 1
-        time.sleep(0.5)  # pequeño delay humano
+                    url = "https://www.coches.net" + link
+                    creationDate = v.get("creationDate", "")
+                    fuelType = v.get("fuelType", "")
+                    location = v.get("location", {})
+                    mainProvince = location.get("mainProvince", "")
+                    make = v.get("make", "")
+                    model = v.get("model", "")
+                    price = v.get("price", 0)
+                    km = v.get("km", 0)
+                    title = v.get("title", "")
 
-    flush_batch()
-    browser.close()
+                    seller = v.get("seller", {})
+                    seller_name = seller.get("name", "")
+                    seller_isProfessional = seller.get("isProfessional", False)
 
-print("\n🚀 Scraping completado correctamente.")
+                    save_car(
+                        url, creationDate, fuelType, mainProvince,
+                        make, model, price, km,
+                        title, seller_name, seller_isProfessional
+                    )
+
+                    print("Saved:", title)
+                    time.sleep(0.5)
+
+                except Exception as e:
+                    print("Error procesando vehículo:", e)
+
+            # pequeño delay entre páginas
+            time.sleep(random.uniform(2, 4))
+
+    finally:
+        browser.close()
+
+print("\n🚀 Bloque completado correctamente.")
