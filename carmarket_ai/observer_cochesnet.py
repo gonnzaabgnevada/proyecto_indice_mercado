@@ -1,22 +1,156 @@
 from playwright.sync_api import sync_playwright
 import duckdb
 import datetime
-import random
 import time
 
 # -------------------------
 # CONFIGURACIÓN DE PÁGINAS
 # -------------------------
-PAGE_BLOCK = 1   # 👈 CAMBIA SOLO ESTO
+START_PAGE = 1
+END_PAGE = 6
 
-PAGES_PER_BLOCK = 10
-start_page = (PAGE_BLOCK - 1) * PAGES_PER_BLOCK + 1
-end_page = PAGE_BLOCK * PAGES_PER_BLOCK
+# -------------------------
+# LISTA COMPLETA DE 132 URLs (CON REPETIDOS)
+# -------------------------
+BASE_URLS = [
+    "https://www.coches.net/search/?arrProvince=28",
+    "https://www.coches.net/search/?arrProvince=8",
+    "https://www.coches.net/search/?arrProvince=46",
+    "https://www.coches.net/search/?arrProvince=41",
+    "https://www.coches.net/search/?arrProvince=3",
+    "https://www.coches.net/search/?arrProvince=29",
+    "https://www.coches.net/search/?arrProvince=30",
+    "https://www.coches.net/search/?arrProvince=28",
+    "https://www.coches.net/search/?arrProvince=18",
+    "https://www.coches.net/search/?arrProvince=48",
+    "https://www.coches.net/search/?arrProvince=15",
+    "https://www.coches.net/search/?arrProvince=7",
+    "https://www.coches.net/search/?arrProvince=31",
+    "https://www.coches.net/search/?arrProvince=47",
+    "https://www.coches.net/search/?arrProvince=28",
+    "https://www.coches.net/search/?arrProvince=8",
+    "https://www.coches.net/search/?arrProvince=11",
+    "https://www.coches.net/search/?arrProvince=45",
+    "https://www.coches.net/search/?arrProvince=9",
+    "https://www.coches.net/search/?arrProvince=39",
+    "https://www.coches.net/search/?arrProvince=13",
+    "https://www.coches.net/search/?arrProvince=28",
+    "https://www.coches.net/search/?arrProvince=46",
+    "https://www.coches.net/search/?arrProvince=43",
+    "https://www.coches.net/search/?arrProvince=4",
+    "https://www.coches.net/search/?arrProvince=14",
+    "https://www.coches.net/search/?arrProvince=17",
+    "https://www.coches.net/search/?arrProvince=23",
+    "https://www.coches.net/search/?arrProvince=28",
+    "https://www.coches.net/search/?arrProvince=8",
+    "https://www.coches.net/search/?arrProvince=41",
+    "https://www.coches.net/search/?arrProvince=3",
+    "https://www.coches.net/search/?arrProvince=29",
+    "https://www.coches.net/search/?arrProvince=30",
+    "https://www.coches.net/search/?arrProvince=20",
+    "https://www.coches.net/search/?arrProvince=28",
+    "https://www.coches.net/search/?arrProvince=18",
+    "https://www.coches.net/search/?arrProvince=33",
+    "https://www.coches.net/search/?arrProvince=6",
+    "https://www.coches.net/search/?arrProvince=36",
+    "https://www.coches.net/search/?arrProvince=21",
+    "https://www.coches.net/search/?arrProvince=24",
+    "https://www.coches.net/search/?arrProvince=28",
+    "https://www.coches.net/search/?arrProvince=8",
+    "https://www.coches.net/search/?arrProvince=46",
+    "https://www.coches.net/search/?arrProvince=50",
+    "https://www.coches.net/search/?arrProvince=12",
+    "https://www.coches.net/search/?arrProvince=25",
+    "https://www.coches.net/search/?arrProvince=27",
+    "https://www.coches.net/search/?arrProvince=28",
+    "https://www.coches.net/search/?arrProvince=41",
+    "https://www.coches.net/search/?arrProvince=3",
+    "https://www.coches.net/search/?arrProvince=29",
+    "https://www.coches.net/search/?arrProvince=30",
+    "https://www.coches.net/search/?arrProvince=11",
+    "https://www.coches.net/search/?arrProvince=45",
+    "https://www.coches.net/search/?arrProvince=28",
+    "https://www.coches.net/search/?arrProvince=8",
+    "https://www.coches.net/search/?arrProvince=37",
+    "https://www.coches.net/search/?arrProvince=1",
+    "https://www.coches.net/search/?arrProvince=2",
+    "https://www.coches.net/search/?arrProvince=26",
+    "https://www.coches.net/search/?arrProvince=28",
+    "https://www.coches.net/search/?arrProvince=46",
+    "https://www.coches.net/search/?arrProvince=18",
+    "https://www.coches.net/search/?arrProvince=10",
+    "https://www.coches.net/search/?arrProvince=19",
+    "https://www.coches.net/search/?arrProvince=22",
+    "https://www.coches.net/search/?arrProvince=28",
+    "https://www.coches.net/search/?arrProvince=8",
+    "https://www.coches.net/search/?arrProvince=43",
+    "https://www.coches.net/search/?arrProvince=4",
+    "https://www.coches.net/search/?arrProvince=14",
+    "https://www.coches.net/search/?arrProvince=17",
+    "https://www.coches.net/search/?arrProvince=23",
+    "https://www.coches.net/search/?arrProvince=28",
+    "https://www.coches.net/search/?arrProvince=41",
+    "https://www.coches.net/search/?arrProvince=3",
+    "https://www.coches.net/search/?arrProvince=29",
+    "https://www.coches.net/search/?arrProvince=30",
+    "https://www.coches.net/search/?arrProvince=49",
+    "https://www.coches.net/search/?arrProvince=28",
+    "https://www.coches.net/search/?arrProvince=8",
+    "https://www.coches.net/search/?arrProvince=46",
+    "https://www.coches.net/search/?arrProvince=11",
+    "https://www.coches.net/search/?arrProvince=45",
+    "https://www.coches.net/search/?arrProvince=5",
+    "https://www.coches.net/search/?arrProvince=28",
+    "https://www.coches.net/search/?arrProvince=18",
+    "https://www.coches.net/search/?arrProvince=34",
+    "https://www.coches.net/search/?arrProvince=40",
+    "https://www.coches.net/search/?arrProvince=44",
+    "https://www.coches.net/search/?arrProvince=42",
+    "https://www.coches.net/search/?arrProvince=28",
+    "https://www.coches.net/search/?arrProvince=8",
+    "https://www.coches.net/search/?arrProvince=48",
+    "https://www.coches.net/search/?arrProvince=15",
+    "https://www.coches.net/search/?arrProvince=7",
+    "https://www.coches.net/search/?arrProvince=16",
+    "https://www.coches.net/search/?arrProvince=28",
+    "https://www.coches.net/search/?arrProvince=46",
+    "https://www.coches.net/search/?arrProvince=41",
+    "https://www.coches.net/search/?arrProvince=3",
+    "https://www.coches.net/search/?arrProvince=29",
+    "https://www.coches.net/search/?arrProvince=30",
+    "https://www.coches.net/search/?arrProvince=28",
+    "https://www.coches.net/search/?arrProvince=8",
+    "https://www.coches.net/search/?arrProvince=43",
+    "https://www.coches.net/search/?arrProvince=4",
+    "https://www.coches.net/search/?arrProvince=14",
+    "https://www.coches.net/search/?arrProvince=17",
+    "https://www.coches.net/search/?arrProvince=23",
+    "https://www.coches.net/search/?arrProvince=28",
+    "https://www.coches.net/search/?arrProvince=18",
+    "https://www.coches.net/search/?arrProvince=11",
+    "https://www.coches.net/search/?arrProvince=45",
+    "https://www.coches.net/search/?arrProvince=50",
+    "https://www.coches.net/search/?arrProvince=12",
+    "https://www.coches.net/search/?arrProvince=28",
+    "https://www.coches.net/search/?arrProvince=8",
+    "https://www.coches.net/search/?arrProvince=46",
+    "https://www.coches.net/search/?arrProvince=33",
+    "https://www.coches.net/search/?arrProvince=6",
+    "https://www.coches.net/search/?arrProvince=36",
+    "https://www.coches.net/search/?arrProvince=28",
+    "https://www.coches.net/search/?arrProvince=41",
+    "https://www.coches.net/search/?arrProvince=3",
+    "https://www.coches.net/search/?arrProvince=29",
+    "https://www.coches.net/search/?arrProvince=30",
+    "https://www.coches.net/search/?arrProvince=32",
+]
 
-# Conectar/crear base de datos
+# -------------------------
+# BASE DE DATOS
+# -------------------------
 conn = duckdb.connect("market.db")
 
-# Crear tabla si no existe
+
 conn.execute("""
 CREATE TABLE IF NOT EXISTS cars (
     url VARCHAR PRIMARY KEY,
@@ -60,6 +194,9 @@ def save_car(
             price, km, title, seller_name, seller_isProfessional, today, today
         ))
 
+# -------------------------
+# SCRAPER
+# -------------------------
 with sync_playwright() as p:
     browser = p.chromium.launch(
         headless=False,
@@ -74,6 +211,9 @@ with sync_playwright() as p:
 
     page = context.new_page()
 
+    page.set_default_navigation_timeout(60000)
+    page.set_default_timeout(60000)
+
     page.add_init_script("""
         Object.defineProperty(navigator, 'webdriver', {
             get: () => undefined
@@ -81,74 +221,78 @@ with sync_playwright() as p:
     """)
 
     try:
-        for page_number in range(start_page, end_page + 1):
+        for base_url in BASE_URLS:
 
-            print(f"\n➡ Scrapeando página {page_number}")
+            print(f"\n==============================")
+            print(f"🚗 URL base: {base_url}")
+            print(f"==============================")
 
-            url_page = f"https://www.coches.net/segunda-mano/?pg={page_number}"
-            page.goto(url_page, wait_until="domcontentloaded")
+            for page_number in range(START_PAGE, END_PAGE + 1):
 
-            # Esperar a que React cargue los datos
-            try:
-                page.wait_for_function(
-                    "() => window.__INITIAL_PROPS__ !== undefined",
-                    timeout=15000
-                )
-            except:
-                print("No se pudo cargar __INITIAL_PROPS__")
-                continue
+                url_page = f"{base_url}&pg={page_number}"
+                print(f"\n➡ Scrapeando {url_page}")
 
-            data = page.evaluate("() => window.__INITIAL_PROPS__")
+                page.goto(url_page, wait_until="domcontentloaded")
 
-            if not data:
-                print("Data vacía")
-                continue
-
-            vehicles = data.get("initialResults", {}).get("items", [])
-
-            if not vehicles:
-                print("No se encontraron vehículos")
-                continue
-
-            print("Vehículos encontrados:", len(vehicles))
-
-            for v in vehicles:
                 try:
-                    link = v.get("url", "")
-                    if not link:
-                        continue
-
-                    url = "https://www.coches.net" + link
-                    creationDate = v.get("creationDate", "")
-                    fuelType = v.get("fuelType", "")
-                    location = v.get("location", {})
-                    mainProvince = location.get("mainProvince", "")
-                    make = v.get("make", "")
-                    model = v.get("model", "")
-                    price = v.get("price", 0)
-                    km = v.get("km", 0)
-                    title = v.get("title", "")
-
-                    seller = v.get("seller", {})
-                    seller_name = seller.get("name", "")
-                    seller_isProfessional = seller.get("isProfessional", False)
-
-                    save_car(
-                        url, creationDate, fuelType, mainProvince,
-                        make, model, price, km,
-                        title, seller_name, seller_isProfessional
+                    page.wait_for_function(
+                        "() => window.__INITIAL_PROPS__ !== undefined",
+                        timeout=15000
                     )
+                except:
+                    print("No se pudo cargar __INITIAL_PROPS__")
+                    continue
 
-                    print("Saved:", title)
-                    time.sleep(0.5)
+                data = page.evaluate("() => window.__INITIAL_PROPS__")
 
-                except Exception as e:
-                    print("Error procesando vehículo:", e)
+                if not data:
+                    print("Data vacía")
+                    continue
 
-            # pequeño delay entre páginas
-            time.sleep(random.uniform(2, 4))
+                vehicles = data.get("initialResults", {}).get("items", [])
+
+                if not vehicles:
+                    print("No se encontraron vehículos")
+                    continue
+
+                print("Vehículos encontrados:", len(vehicles))
+
+                for v in vehicles:
+                    try:
+                        link = v.get("url", "")
+                        if not link:
+                            continue
+
+                        url = "https://www.coches.net" + link
+                        creationDate = v.get("creationDate", "")
+                        fuelType = v.get("fuelType", "")
+                        location = v.get("location", {})
+                        mainProvince = location.get("mainProvince", "")
+                        make = v.get("make", "")
+                        model = v.get("model", "")
+                        price = v.get("price", 0)
+                        km = v.get("km", 0)
+                        title = v.get("title", "")
+
+                        seller = v.get("seller", {})
+                        seller_name = seller.get("name", "")
+                        seller_isProfessional = seller.get("isProfessional", False)
+
+                        save_car(
+                            url, creationDate, fuelType, mainProvince,
+                            make, model, price, km,
+                            title, seller_name, seller_isProfessional
+                        )
+
+                        print("Saved:", title)
+                        time.sleep(0.5)
+
+                    except Exception as e:
+                        print("Error procesando vehículo:", e)
+
+                time.sleep(2)
 
     finally:
         browser.close()
 
-print("\n🚀 Bloque completado correctamente.")
+print("\n🚀 Proceso completado correctamente.")
