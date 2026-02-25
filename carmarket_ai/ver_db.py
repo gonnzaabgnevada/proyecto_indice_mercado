@@ -13,7 +13,7 @@ conn = duckdb.connect(db_path)
 columnas = [
     "creationDate", "fuelType", "mainProvince", "make", "model",
     "price", "km", "title", "url", "seller_name", "seller_isProfessional",
-    "first_seen", "last_seen"
+    "first_seen", "last_seen", "sold"
 ]
 
 df = conn.execute(f"SELECT {', '.join(columnas)} FROM cars").fetchdf()

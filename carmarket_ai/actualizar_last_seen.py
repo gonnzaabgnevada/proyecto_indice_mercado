@@ -50,7 +50,7 @@ with sync_playwright() as p:
         })
     """)
 
-    # 👉 Solo permitir un bloqueo inicial
+    # 👉 Permitir solo un bloqueo inicial
     first_url = True
     initial_block_used = False
 
@@ -61,39 +61,16 @@ with sync_playwright() as p:
         try:
             response = page.goto(url, wait_until="domcontentloaded")
 
-            # -------------------------
-            # BLOQUEO POR STATUS
-            # -------------------------
             if response is None:
                 print("🚨 Sin respuesta. Posible bloqueo.")
                 browser.close()
                 sys.exit()
 
-            if response.status in [403, 429]:
-                print(f"🚨 BLOQUEADO (status {response.status})")
-                browser.close()
-                sys.exit()
-
-            # -------------------------
-            # 404 REAL → VENDIDO
-            # -------------------------
-            if response.status == 404:
-                print("❌ 404 real → Marcado como vendido")
-
-                conn.execute("""
-                    UPDATE cars
-                    SET sold = ?
-                    WHERE url = ?
-                """, (today, url))
-
-                time.sleep(10)
-                continue
-
-            # -------------------------
-            # BLOQUEO POR MENSAJE HTML
-            # -------------------------
             html = page.content().lower()
 
+            # -------------------------
+            # 🚨 BLOQUEO POR MENSAJE
+            # -------------------------
             if "ups! parece que algo no va bien" in html:
 
                 if first_url and not initial_block_used:
@@ -104,12 +81,28 @@ with sync_playwright() as p:
                     time.sleep(random.uniform(4, 7))
                     first_url = False
                     continue
-
                 else:
                     print("🚨 BLOQUEO REAL DETECTADO. Deteniendo programa.")
+                    browser.close()
+                    sys.exit()
 
-            # A partir de aquí ya no es primera URL
+            # Ya no es primera URL
             first_url = False
+
+            # -------------------------
+            # ❌ ANUNCIO VENDIDO POR TEXTO
+            # -------------------------
+            if "el anuncio al que intentas acceder ya no está disponible" in html:
+                print("❌ Anuncio no disponible → Marcado como vendido")
+
+                conn.execute("""
+                    UPDATE cars
+                    SET sold = ?
+                    WHERE url = ?
+                """, (today, url))
+
+                time.sleep(10)
+                continue
 
             # -------------------------
             # ESPERAR JSON
@@ -139,7 +132,7 @@ with sync_playwright() as p:
                 continue
 
             # -------------------------
-            # ACTUALIZAR CAMPOS
+            # ✅ ACTUALIZAR CAMPOS
             # -------------------------
             price = vehicle.get("price", 0)
             km = vehicle.get("km", 0)
@@ -177,7 +170,7 @@ with sync_playwright() as p:
             sys.exit()
 
         # -------------------------
-        # ESPERA ENTRE URLS
+        # ⏳ ESPERA ENTRE URLS
         # -------------------------
         time.sleep(10)
 
