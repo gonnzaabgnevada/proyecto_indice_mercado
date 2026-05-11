@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Plugin Crestanevada",
+  "version": "1.0",
+  "description": "Muestra mis datos propios en coches.net",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "http://localhost:5000/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.coches.net/search/*"],
+      "js": ["content_script.js"],
+      "css": ["styles.css"]
+    }
+  ]
+}

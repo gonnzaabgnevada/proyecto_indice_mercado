@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Motor Intel</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 380px;
+      min-height: 540px;
+      font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+      background: #F8FAFC;
+      color: #0F172A;
+    }
+
+    /* HEADER */
+    .popup-header {
+      background: #0F172A;
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .popup-logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.05em;
+      flex-shrink: 0;
+    }
+
+    .popup-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #F8FAFC;
+    }
+
+    .popup-subtitle {
+      font-size: 10.5px;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 1px;
+    }
+
+    /* STATS ROW */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      border-bottom: 1px solid #E2E8F0;
+    }
+
+    .stat-cell {
+      padding: 12px 14px;
+      border-right: 1px solid #E2E8F0;
+      background: #fff;
+    }
+
+    .stat-cell:last-child { border-right: none; }
+
+    .stat-cell-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #94A3B8;
+      margin-bottom: 3px;
+    }
+
+    .stat-cell-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0F172A;
+    }
+
+    /* FILTERS */
+    .filters {
+      padding: 10px 12px;
+      background: #fff;
+      border-bottom: 1px solid #E2E8F0;
+      display: flex;
+      gap: 8px;
+    }
+
+    .filters input,
+    .filters select {
+      font-family: inherit;
+      font-size: 12.5px;
+      border: 1px solid #E2E8F0;
+      border-radius: 6px;
+      padding: 6px 10px;
+      background: #F8FAFC;
+      color: #334155;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .filters input { flex: 1; }
+    .filters select { min-width: 110px; }
+
+    .filters input:focus,
+    .filters select:focus {
+      border-color: #3B82F6;
+      background: #fff;
+    }
+
+    /* CAR LIST */
+    #contenedor {
+      max-height: 360px;
+      overflow-y: auto;
+    }
+
+    #contenedor::-webkit-scrollbar { width: 4px; }
+    #contenedor::-webkit-scrollbar-track { background: transparent; }
+    #contenedor::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+
+    .car-item {
+      padding: 12px 14px;
+      border-bottom: 1px solid #F1F5F9;
+      background: #fff;
+      transition: background 0.1s;
+    }
+
+    .car-item:hover { background: #F8FAFC; }
+
+    .car-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 4px;
+    }
+
+    .car-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0F172A;
+      line-height: 1.2;
+      flex: 1;
+    }
+
+    .car-portal {
+      font-size: 10px;
+      background: #EFF6FF;
+      color: #1D4ED8;
+      border: 1px solid #BFDBFE;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-weight: 600;
+      flex-shrink: 0;
+      margin-left: 6px;
+    }
+
+    .car-meta {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .car-year {
+      font-size: 11px;
+      color: #64748B;
+      font-weight: 500;
+    }
+
+    .car-km {
+      font-size: 11px;
+      color: #64748B;
+    }
+
+    .car-fuel {
+      font-size: 10.5px;
+      font-weight: 600;
+    }
+
+    .car-price {
+      font-size: 15px;
+      font-weight: 800;
+      color: #1E40AF;
+    }
+
+    /* STATES */
+    .empty-state,
+    .error-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 50px 20px;
+      gap: 12px;
+      color: #CBD5E1;
+    }
+
+    .empty-state p,
+    .error-state p {
+      font-size: 13px;
+      color: #94A3B8;
+    }
+
+    .error-state code {
+      font-family: 'Courier New', monospace;
+      background: #F1F5F9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #EF4444;
+    }
+
+    /* FOOTER */
+    .popup-footer {
+      padding: 8px 14px;
+      background: #F8FAFC;
+      border-top: 1px solid #E2E8F0;
+      font-size: 10px;
+      color: #94A3B8;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="popup-header">
+    <div class="popup-logo">M</div>
+    <div>
+      <div class="popup-title">Motor Intel</div>
+      <div class="popup-subtitle">Base de datos interna</div>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-cell">
+      <div class="stat-cell-label">Total</div>
+      <div class="stat-cell-value" id="stat-total">—</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-cell-label">Precio medio</div>
+      <div class="stat-cell-value" id="stat-medio">—</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-cell-label">Electrif.</div>
+      <div class="stat-cell-value" id="stat-hibrido">—</div>
+    </div>
+  </div>
+
+  <div class="filters">
+    <input type="text" id="search-input" placeholder="Buscar marca, modelo…" />
+    <select id="filter-fuel">
+      <option value="">Todos</option>
+    </select>
+  </div>
+
+  <div id="contenedor">
+    <div class="empty-state">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="12" y1="18" x2="12.01" y2="18"/>
+      </svg>
+      <p>Conectando con el servidor…</p>
+    </div>
+  </div>
+
+  <div class="popup-footer">Motor Intel · Base de datos propia scrapeada</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
